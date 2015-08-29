@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="SpotifyRestService" default="build">
+	<!-- Get the user specific build properties file.  These properties take precedence over the properties set in build.properties or in build.xml-->
+	<property file="${user.name}.build.properties" />
+	<!-- Get the build properties -->
+	<property file="build.properties"/>
+
+	<property name="appname" value="SpotifyRestService" />
+	<property name="war.name" value="SpotifyRestService.war" />
+
+	<property name="src.dir" location="src" />
+	<property name="tst.dir" location="test" />
+	<property name="web.dir" location="WebContent" />
+
+	<property name="lib.dir" location="./lib" />
+	<property name="build.dir" location="build" />
+	<property name="classes.dir" location="${build.dir}/classes" />
+	<property name="test.classes.dir" location="${build.dir}/test-classes" />
+	<property name="dist.dir" location="${build.dir}/dist" />
+	<property name="conf.dir" location="${web.dir}/WEB-INF/conf" />
+	<property name="VERBOSE" value="false" />
+
+	<!--<taskdef name="jmeter" classname="org.programmerplanet.ant.taskdefs.jmeter.JMeterTask" >
+		<classpath>
+		        <fileset file="./testLib/ant-jmeter-1.1.1.jar"/>
+		    </classpath>
+	</taskdef>-->
+
+	<path id="classpath.base">
+		<fileset dir="${lib.dir}">
+			<exclude name="**/junit*.jar" />
+			<exclude name="**/jmock*.jar" />
+		</fileset>
+		<fileset id="ibm.lib.module" dir="${ibm.dir}" >
+			<include name="*.jar"/>
+		</fileset>
+		<fileset id="ibm.plugin.module" dir="${ibm.plugins.dir}" >
+			<include name="*.jar"/>
+		</fileset>		
+		<fileset id="ibm.endorsed.lib.module" dir="${ibm.endorsed.dir}" >
+			<include name="*.jar"/>
+		</fileset>
+		<pathelement location="${classes.dir}" />
+	</path>
+
+	<path id="classpath.test">
+		<fileset dir="${lib.dir}">
+			<exclude name="**/jcl-over-slf4j-1.6.1.jar" />
+			<exclude name="**/log4j-1.2.16.jar" />
+			<exclude name="**/slf4j-log4j12-1.6.1.jar" />
+		</fileset>
+		<fileset id="ibm.lib.module" dir="${ibm.dir}" >
+			<include name="*.jar"/>
+		</fileset>		
+		<fileset id="ibm.plugin.module" dir="${ibm.plugins.dir}" >
+			<include name="com.ibm.ws.prereq.jackson.jar"/>
+			<!-- dont include runtime dist. this include ant distribution and will conflict with ant1.8.2 
+			<exclude name="com.ibm.ws.runtime.dist.jar"/>-->
+		</fileset>
+		<fileset id="ibm.endorsed.lib.module" dir="${ibm.endorsed.dir}" >
+					<include name="*.jar"/>
+				</fileset>
+		<pathelement location="${conf.dir}" />
+		<pathelement location="${classes.dir}" />
+		<pathelement location="${test.classes.dir}" />
+	</path>
+
+	<!-- COMPILATION -->
+	<target name="compile" depends="init">
+		<property name="classpath" refid="classpath.base" />
+		<echo message="classpath= ${classpath}" />
+
+		<javac srcdir="${src.dir}" destdir="${classes.dir}" verbose="${VERBOSE}" debug="true">
+			<compilerarg value="-Djava.endorsed.dirs=${ibm.endorsed.dir}" />
+			<classpath refid="classpath.base" />
+		</javac>
+
+		<copy todir="${classes.dir}">
+			<fileset dir="${src.dir}">
+				<include name="**/*.xml" />
+				<exclude name="**/*Test.*" />
+			</fileset>
+	 		<fileset dir="${conf.dir}">
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="compileWindows" depends="clean">
+		<property name="classpath" refid="classpath.base" />
+		<echo message="classpath= ${classpath}" />
+
+		<javac srcdir="${src.dir}" destdir="${classes.dir}" verbose="${VERBOSE}" debug="true" executable="${ibm.javac.path}" compiler="javac1.6">
+			<compilerarg value="-Djava.endorsed.dirs=${windows.websphere.path.dir}" />
+			<classpath refid="classpath.base" />
+		</javac>
+
+		<copy todir="${classes.dir}">
+			<fileset dir="${src.dir}">
+				<include name="**/*.xml" />
+				<exclude name="**/*.properties" />
+				<exclude name="**/*Test.*" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="compile-test" depends="compile">
+		<property name="testclasspath" refid="classpath.test" />
+		<echo message="classpath= ${testclasspath}" />
+		<javac srcdir="${tst.dir}" destdir="${test.classes.dir}" verbose="${VERBOSE}" executable="${ibm.javac.path}" compiler="javac1.6">
+			<classpath refid="classpath.test" />
+		</javac>
+	</target>
+
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<delete dir="${dist.dir}" />
+	</target>
+
+	<target name="clean.all" depends="clean" description="Removes generated directories and files AND copied libraries ">
+		<delete dir="${lib.dir}" quiet="true"/>
+	</target>
+
+	<!-- INITIALIZATION -->
+	<target name="init" depends="clean">
+		<echo message="Creating Build/Dist Folders" />
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${classes.dir}" />
+		<mkdir dir="${test.classes.dir}" />
+		<mkdir dir="${dist.dir}" />
+		<!--add references to all libraries used by this module from their repository location-->
+		<path id="path.module.libraries">
+			<fileset id="lib.module" dir="${tools.dir}/ask/2.0">
+				<patternset id="set.module">
+					<include name="**/base/commons/commons-lang-2.6.jar"/>
+					<!--<include name="**/base/commons/*logging*"/>-->				
+					<!--<include name="**/base/logging/**" />-->
+					<include name="**/base/test/junit*" />
+					<include name="**/base/test/mockito*" />
+					<include name="**/base/configuration/*beans*" />
+					<include name="**/base/configuration/*core*" />
+					<include name="**/base/configuration/*context*" />
+					<include name="**/base/configuration/*web*" />					
+					<include name="**/base/configuration/*asm*" />
+					<include name="**/base/configuration/*expression*" />					
+				</patternset>
+				
+			</fileset>
+<!--		<fileset id="lib.module.ojdbc" dir="${tools.dir}/weblogic/10.3/wlserver_10.3/server/lib" >
+				<patternset id="set.module">
+					<include name="**/ojdbc6.jar"/>
+				</patternset>
+			</fileset>-->
+			<fileset id="lib.module.log4j" dir="${tools.dir}/ask/2.0/base/configuration" >
+				<patternset id="set.module">
+					<include name="**/org.springframework.web-3.0.5.RELEASE.jar"/>
+				</patternset>
+			</fileset>
+			<fileset id="lib.module.jackson" dir="${tools.dir}/jackson" >
+				<patternset id="set.module">
+					<include name="**/2.2.3/*2.2.3*"/>
+				</patternset>
+			</fileset>
+<!--		<fileset id="lib.module.http" dir="${tools.dir}/commons-httpclient" >
+				<patternset id="set.module">
+					<include name="**/3.1/*httpclient*"/>
+				</patternset>
+			</fileset>
+			<fileset id="lib.module.codec" dir="${tools.dir}/commons-codec" >
+				<patternset id="set.module">
+					<include name="**/1.4/commons-codec-1.4.jar"/>
+				</patternset>
+			</fileset>
+			<fileset id="lib.module.joda" dir="${tools.dir}/joda-time" >
+				<patternset id="set.module">
+					<include name="**/2.3/joda-time.jar"/>
+				</patternset>
+			</fileset>		-->					
+		</path>
+		<copy todir="${lib.dir}" flatten="true">
+			<path refid="path.module.libraries"/>
+		</copy>
+		<fileset id="fileset.classpath" dir="${lib.dir}">
+			<exclude name="**/junit*.jar"/>
+			<exclude name="**/mockito*.jar"/>
+			<exclude name="**/slf4j-simple-*.jar"/>
+			<exclude name="**/slf4j-log4j*.jar"/>
+		</fileset>
+	</target>
+
+	<!-- TESTING -->
+	<target name="test" depends="compile-test">
+		<mkdir dir="${build.dir}/test-results" />
+		<echo message="Running unit tests ..." />
+		<!--<junit printSummary="no" fork="yes" haltonfailure="yes" haltonerror="yes">
+			<classpath refid="classpath.test" />
+			<formatter type="plain" usefile="false" />
+			<formatter type="xml" usefile="true" />
+			<batchtest todir="${build.dir}/test-results">
+				<fileset dir="${test.classes.dir}">
+					<include name="**/*Test.class" />
+				</fileset>
+			</batchtest>
+		</junit>-->
+	</target>
+
+	<!-- PACKAGING  -->
+	<target name="build" depends="test, runCI">
+
+		<war warfile="${dist.dir}/${war.name}" webxml="${web.dir}/WEB-INF/web.xml" basedir="${classes.dir}" >
+			<lib dir="${lib.dir}">
+				<exclude name="**/log4j*.xml" />
+				<exclude name="**/junit*.jar" />
+				<exclude name="**/j2ee*.jar" />
+				<exclude name="**/jmock*.jar" />
+				<exclude name="**/spring-test*.jar" />
+				<exclude name="**/jaxb*.jar" />
+				<exclude name="**/jersey*.jar" />
+				<exclude name="**/mockito*.jar" />
+				<!--<exclude name="**/slf4j-log4j*.jar" />-->
+				<!-- The 'simple' implementation routes all logging to System.err -->
+				<exclude name="**/slf4j-simple*.jar" />				
+			</lib>
+
+			<classes dir="${classes.dir}" excludes="**/*Test*"  />
+	 		<!--<webinf dir="${conf.dir}">
+				<exclude name="*.properties" />
+				<include name="*.xml" />
+			</webinf>-->
+	 		<webinf dir="${web.dir}/WEB-INF" includes="*.xml">
+			</webinf>
+			<fileset dir="${web.dir}" includes="*.jsp *.html" />
+		</war>
+	</target>
+
+	<!-- CI Setup -->
+	<target name="runCI" depends="compile, compile-test">
+
+		<property name="test.classpath" refid="classpath.test" />
+
+		<!--<ant antfile="./ci.xml">
+			<property name="package.title" value="ceaWs" />
+			<property name="in.class.dir" value="${classes.dir}" />
+			<property name="in.test.classpath" value="${test.classpath}" />
+			<property name="in.test.class.dir" value="${test.classes.dir}" />
+			<property name="in.java.src.dir" value="${src.dir}" />
+		</ant>-->
+	</target>
+
+
+	<target name="run-load-test">
+
+		<!--<jmeter jmeterhome="${jmeter.dir}" 
+			testplan="${basedir}/loadtests/CEAJMeterLoadTest.jmx" 
+			resultlog="${basedir}/loadtests/CEAJMeterLoadTest.jtl">
+			<property name="jmeter.save.saveservice.output_format" value="xml"/>
+			<property name="jmeter.save.saveservice.assertion_results" value="all"/>
+			<jvmarg value="-Duser.dir=${basedir}/loadtests/"/> 			
+		</jmeter>
+
+		<xslt in="${basedir}/loadtests/CEAJMeterLoadTest.jtl" 
+			out="${basedir}/loadtests/CEAJMeterLoadTest_summary.html" 
+			style="${basedir}/loadtests/jmeter-results-report_21.xsl" />
+
+		<xslt in="${basedir}/loadtests/CEAJMeterLoadTest.jtl" 
+			out="${basedir}/loadtests/CEAJMeterLoadTest_detailed.html" 
+			style="${basedir}/loadtests/jmeter-results-detail-report_21.xsl" />-->
+	</target>
+
+</project>
+
